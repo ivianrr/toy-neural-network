@@ -1,5 +1,38 @@
+from dbm import ndbm
+from hashlib import sha1
+from statistics import mode
 from typing import Callable
 import numpy as np
+
+import struct
+import matplotlib.pyplot as plt
+
+def load_data():
+    # with open('samples/t10k-images.idx3-ubyte','rb') as f:
+    with open('samples/train-images.idx3-ubyte','rb') as f:
+        magic, size = struct.unpack(">II", f.read(8))
+        nrows, ncols = struct.unpack(">II", f.read(8))
+        data = np.fromfile(f, dtype=np.dtype(np.uint8).newbyteorder('>'))
+        data = data.reshape((size, -1))
+        data=data/255
+    # with open('samples/t10k-labels.idx1-ubyte','rb') as f:
+    with open('samples/train-labels.idx1-ubyte','rb') as f:
+        magic, size = struct.unpack(">II", f.read(8))
+        labels = np.fromfile(f, dtype=np.dtype(np.uint8).newbyteorder('>'))
+        labels = labels.reshape((size,)) # (Optional)
+    return labels, data, nrows, ncols
+def load_validation_data():
+    with open('samples/t10k-images.idx3-ubyte','rb') as f:
+        magic, size = struct.unpack(">II", f.read(8))
+        nrows, ncols = struct.unpack(">II", f.read(8))
+        data = np.fromfile(f, dtype=np.dtype(np.uint8).newbyteorder('>'))
+        data = data.reshape((size, -1))
+        data=data/255
+    with open('samples/t10k-labels.idx1-ubyte','rb') as f:
+        magic, size = struct.unpack(">II", f.read(8))
+        labels = np.fromfile(f, dtype=np.dtype(np.uint8).newbyteorder('>'))
+        labels = labels.reshape((size,)) # (Optional)
+    return labels, data, nrows, ncols
 
 class Functions:
     # https://medium.com/@krishnakalyan3/introduction-to-exponential-linear-unit-d3e2904b366c
@@ -48,7 +81,6 @@ class Layer:
         self.dW: np.ndarray = None
         self.db: np.ndarray = None
         self.dZ: np.ndarray = None
-        self.dA: np.ndarray = None
 
     def __repr__(self) -> str:
         return f"Layer({self.size}, {self.act_f}, {self.weight_dim})"
@@ -115,16 +147,40 @@ class Network:
         Y[labels,np.arange(labels.size)]=1
         return Y
 
-    def get_predictions(self):
+    def get_predictions(self, X=None):
+        if X is not None: self.forward_propagate(X)            
         A=self.layers[-1].A
         return np.argmax(A,axis=0)
 
-    def backward_prop(self,X,Y):
-        for i, layer in reversed(enumerate(self.layers)):
-            
-            pass
+    def backward_prop(self,X:np.ndarray, Y:np.ndarray):
+        """
+        Args:
+        Y:one hot encoded
+        """
+        batch_size=X.shape[1]
+        output_layer=self.layers[-1]
+        if self.loss_function.__name__ == "cross_ent" and output_layer.act_f.__name__=="softmax":
+            output_layer.dZ=output_layer.A-Y
+            output_layer.db=np.sum(output_layer.dZ,axis=1,keepdims=True)/batch_size
+            output_layer.dW= (output_layer.dZ @ self.layers[-2].A.T )/batch_size
+        else:
+            print("Loss:",self.loss_function.__name__,"Act:",)
+            raise NotImplementedError("Can't handle other combinations of last layer activation function and loss than softmax, cross_entropy yet.")
+        for i, layer in reversed(list(enumerate(self.layers[:-1]))): # TODO: revisar esto
+            upper_layer=self.layers[i+1]
+            layer.dZ= upper_layer.weights.T @ upper_layer.dZ * layer.act_f(layer.Z,derivative=True)
+            layer.db=np.sum(layer.dZ,axis=1,keepdims=True)/batch_size
 
-    def gradient_descent(self, X, Y, alpha, epochs, batch_size):
+            lower_A = X if i==0 else self.layers[i-1].A
+            layer.dW = (layer.dZ @ lower_A.T )/batch_size
+
+    def update_params(self,alpha):
+        for layer in self.layers:
+            layer.weights-=alpha*layer.dW
+            layer.biases-=alpha*layer.db
+
+
+    def gradient_descent(self, X, Y,*, alpha, epochs, batch_size):#TODO: add *,
         def batch_split(x,batch_size,axis):
             b=batch_size
             x=x.swapaxes(0,axis)
@@ -140,22 +196,58 @@ class Network:
         for i in range(epochs):
             # Shuffle trainig data first
             perms=np.random.permutation(N)
-            X=X[:,perms]
-            Y=Y_one_hot[perms]
+            X_perm=X[:,perms]
+            Y_perm=Y_one_hot[:,perms]
             # Split in batches and run every batch each epoch. 
-            for X_b,Y_b in zip(batch_split(X,batch_size,axis=1),batch_split(Y,batch_size,axis=0)):
-                Z1,A1,Z2,A2 = forward_prop(W1,b1,W2,b2,X_b)
-                dW1,db1,dW2,db2 = backward_prop(Z1, A1, Z2, A2, W1, W2, X_b, Y_b)
-                W1, b1, W2, b2 = update_params(W1,b1, W2,b2,dW1,db1,dW2,db2,alpha)
+            nb=0
+            for X_b,Y_b in zip(batch_split(X_perm,batch_size,axis=1),batch_split(Y_perm,batch_size,axis=1)):
+                self.forward_propagate(X_b)
+                self.backward_prop(X_b, Y_b)
+                self.update_params(alpha)
+                nb+=1
 
-        pass
+            predictions=model.get_predictions(X)
+            acc=model.get_accuracy(predictions,Y)
+            acc_v=0
+            if X_V is not None and Y_V is not None:
+                predictions_v=model.get_predictions(X_V)
+                acc_v=model.get_accuracy(predictions_v,Y_V)
+            print(f"Epoch: {i}\tAccuracy (T): {acc:.4f}\tAccuracy (V): {acc_v:.4f}")
+
+    @staticmethod
+    def get_accuracy(predictions,Y):
+        return np.sum(predictions==Y)/Y.size
 
 
 if __name__ == "__main__":
+    Y_T, X_T, nrows,ncols =load_data()
+    X_T=X_T.T
+    Y_V, X_V, _,_ =load_validation_data()
+    X_V=X_V.T    
+
+    model = Network(input_size=nrows*ncols)
+    model.add_layer(Layer(50, Functions.ELU))
+    model.add_layer(Layer(10, Functions.ELU))
+    model.add_layer(Layer(10, Functions.softmax))
+    model.set_loss_function(Functions.cross_ent)    
+
+    model.init_params()
+
+    model.gradient_descent(X_T,Y_T,alpha=0.1,epochs=100,batch_size=100)
+
+
+    predictions_T=model.get_predictions(X_T)
+    acc_T=model.get_accuracy(predictions_T,Y_T)
+    print("Final accuracy (Training)",acc_T)
+    predictions_V=model.get_predictions(X_V)
+    acc_V=model.get_accuracy(predictions_V,Y_V)
+    print("Final accuracy (Validation)",acc_V)
+
+if False and __name__ == "__main__":
     model = Network(input_size=5)
     model.add_layer(Layer(2, Functions.ReLU))
     model.add_layer(Layer(2, Functions.ELU))
-    model.add_layer(Layer(4, Functions.softmax))
+    model.add_layer(Layer(10, Functions.softmax))
     model.set_loss_function(Functions.cross_ent)
     print(model)
     model.init_params()
@@ -169,3 +261,16 @@ if __name__ == "__main__":
     print("Probabilities of first prediction.")
     print(model.layers[-1].A[:,0])
 
+    Y=np.arange(10)[np.random.permutation(10)]
+
+    model.backward_prop(X,Y)
+    model.update_params(0.1)
+    
+    print("X",X.shape,"Y",Y.shape)
+    model.gradient_descent(X,list(range(10)),alpha=0.1,epochs=10,batch_size=10)
+
+    print("Trained Predictions")
+    model.forward_propagate(X)
+    print(model.get_predictions())
+    print("Real values")
+    print(Y)
