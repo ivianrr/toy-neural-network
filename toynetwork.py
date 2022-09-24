@@ -1,6 +1,4 @@
-from dbm import ndbm
-from hashlib import sha1
-from statistics import mode
+import pickle
 from typing import Callable
 import numpy as np
 
@@ -52,8 +50,7 @@ class Functions:
         return np.exp(Z) / np.sum(np.exp(Z), axis=0)
 
     @staticmethod
-    def ELU(Z,derivative=False):
-        a=1
+    def ELU(Z,derivative=False,a=1):
         A=np.zeros_like(Z)
         if not derivative:
             A[Z>0]=Z[Z>0]
@@ -63,6 +60,11 @@ class Functions:
             A[Z<=0]=Functions.ELU(Z[Z<=0],False)+a
         return A
 
+    @staticmethod
+    def ELU_alpha_generator(alpha):
+        def ELU_alpha(*args,**kwargs):
+            return Functions.ELU(*args,**kwargs,a=alpha)
+        return ELU_alpha
 
     @staticmethod
     def cross_ent(Y, A):  # true(onehotencoded), predicted
@@ -99,6 +101,7 @@ class Network:
         self.layers: list[Layer] = []
         self.input_size: int = input_size
         self.loss_function: Callable = loss_function
+        self.history=None
         if layer_list != None:
             for l in layer_list:
                 self.add_layer(l)
@@ -180,7 +183,7 @@ class Network:
             layer.biases-=alpha*layer.db
 
 
-    def gradient_descent(self, X, Y,*, alpha, epochs, batch_size):#TODO: add *,
+    def gradient_descent(self, X, Y,*, alpha, epochs, batch_size,X_V=None,Y_V=None):
         def batch_split(x,batch_size,axis):
             b=batch_size
             x=x.swapaxes(0,axis)
@@ -190,7 +193,7 @@ class Network:
                 yield x[r*b:(r+1)*b].swapaxes(0,axis)
             if l%b>0:
                 yield x[l//b*b:].swapaxes(0,axis)
-
+        self.history=[]
         N=Y.size
         Y_one_hot=self.one_hot(Y)
         for i in range(epochs):
@@ -204,38 +207,62 @@ class Network:
                 self.forward_propagate(X_b)
                 self.backward_prop(X_b, Y_b)
                 self.update_params(alpha)
-                nb+=1
 
-            predictions=model.get_predictions(X)
-            acc=model.get_accuracy(predictions,Y)
-            acc_v=0
-            if X_V is not None and Y_V is not None:
-                predictions_v=model.get_predictions(X_V)
-                acc_v=model.get_accuracy(predictions_v,Y_V)
-            print(f"Epoch: {i}\tAccuracy (T): {acc:.4f}\tAccuracy (V): {acc_v:.4f}")
+                # # Overkill epoch logging, just for fun
+                # predictions=self.get_predictions(X)
+                # acc=self.get_accuracy(predictions,Y)
+                # acc_v=0
+                # if X_V is not None and Y_V is not None:
+                #     predictions_v=self.get_predictions(X_V)
+                #     acc_v=self.get_accuracy(predictions_v,Y_V)
+                # self.history.append((i+nb/N*batch_size,acc,acc_v))
+                # print(f"Epoch: {i+nb/N*batch_size:.2f}\tAccuracy (T): {acc:.4f}\tAccuracy (V): {acc_v:.4f}")
+
+                nb+=1
+            if i%1==0:
+                acc=0
+                predictions=self.get_predictions(X)
+                acc=self.get_accuracy(predictions,Y)
+                acc_v=0
+                if X_V is not None and Y_V is not None:
+                    predictions_v=self.get_predictions(X_V)
+                    acc_v=self.get_accuracy(predictions_v,Y_V)
+                self.history.append((i,acc,acc_v))
+                print(f"Epoch: {i}\tAccuracy (T): {acc:.4f}\tAccuracy (V): {acc_v:.4f}")
 
     @staticmethod
     def get_accuracy(predictions,Y):
         return np.sum(predictions==Y)/Y.size
+    
+    def plot_history(self):
+        epoch,train_acc,val_acc=zip(*self.history)
+        plt.plot(epoch,train_acc,label="Training")
+        plt.plot(epoch,val_acc,label="Validation")
+        ax=plt.gca()
+        ax.set_xlim([0, None])
+        ax.set_ylim([0, 1])
+        ax.legend()
+        plt.show()
 
 
 if __name__ == "__main__":
+    # Load dataset
     Y_T, X_T, nrows,ncols =load_data()
     X_T=X_T.T
     Y_V, X_V, _,_ =load_validation_data()
     X_V=X_V.T    
 
+    # Create and initialise network
     model = Network(input_size=nrows*ncols)
     model.add_layer(Layer(50, Functions.ELU))
-    model.add_layer(Layer(10, Functions.ELU))
     model.add_layer(Layer(10, Functions.softmax))
     model.set_loss_function(Functions.cross_ent)    
-
     model.init_params()
 
-    model.gradient_descent(X_T,Y_T,alpha=0.1,epochs=100,batch_size=100)
+    # Train the network
+    model.gradient_descent(X_T,Y_T,alpha=0.05,epochs=50,batch_size=32,X_V=X_V,Y_V=Y_V)
 
-
+    # Check accuracy and generate a plot with its history
     predictions_T=model.get_predictions(X_T)
     acc_T=model.get_accuracy(predictions_T,Y_T)
     print("Final accuracy (Training)",acc_T)
@@ -243,34 +270,8 @@ if __name__ == "__main__":
     acc_V=model.get_accuracy(predictions_V,Y_V)
     print("Final accuracy (Validation)",acc_V)
 
-if False and __name__ == "__main__":
-    model = Network(input_size=5)
-    model.add_layer(Layer(2, Functions.ReLU))
-    model.add_layer(Layer(2, Functions.ELU))
-    model.add_layer(Layer(10, Functions.softmax))
-    model.set_loss_function(Functions.cross_ent)
-    print(model)
-    model.init_params()
+    with open('model.pkl', 'wb') as outp:
+        pickle.dump(model, outp, pickle.HIGHEST_PROTOCOL)
 
-    X = np.random.rand(5, 10)
-    model.forward_propagate(X)
+    model.plot_history()
 
-    print("Predictions")
-    print(model.get_predictions())
-
-    print("Probabilities of first prediction.")
-    print(model.layers[-1].A[:,0])
-
-    Y=np.arange(10)[np.random.permutation(10)]
-
-    model.backward_prop(X,Y)
-    model.update_params(0.1)
-    
-    print("X",X.shape,"Y",Y.shape)
-    model.gradient_descent(X,list(range(10)),alpha=0.1,epochs=10,batch_size=10)
-
-    print("Trained Predictions")
-    model.forward_propagate(X)
-    print(model.get_predictions())
-    print("Real values")
-    print(Y)
