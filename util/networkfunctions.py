@@ -11,7 +11,11 @@ def ReLU(Z, derivative=False):
 
 
 def Sigmoid(Z, derivative=False):
-    return 1*(Z > 0)
+    if not derivative:
+        return 1/(1+np.exp(-Z))
+    else:
+        sz=Sigmoid(Z,derivative=False)
+        return sz*(1-sz)
 
 
 def softmax(Z, derivative=False):
