@@ -17,8 +17,9 @@ if __name__ == "__main__":
     model = Network(input_size=nrows*ncols)
     model.add_layer(Layer(100, Functions.ReLU,lambda_L2=0.005))
     model.add_layer(Layer(30, Functions.ELU,lambda_L2=0.005))
-    # for i in range(2):
-    #     model.add_layer(Layer(20, Functions.ELU,lambda_L2=0.001))
+    for i in range(5):
+        model.add_layer(Layer(20, Functions.ELU,lambda_L2=0.001))
+    model.add_layer(Layer(30, Functions.Sigmoid))
     model.add_layer(Layer(30, Functions.Sigmoid))
     model.add_layer(Layer(10, Functions.softmax))
     model.set_loss_function(Functions.cross_ent)
@@ -26,8 +27,8 @@ if __name__ == "__main__":
     model.init_params()
 
     # Train the network
-    acc_T, acc_V = model.gradient_descent(X_T, Y_T, alpha=0.05, epochs=20,
-                           batch_size=32, X_V=X_V, Y_V=Y_V,p=0.25,mu=0.9)
+    acc_T, acc_V = model.gradient_descent(X_T, Y_T, alpha=0.05, epochs=50,
+                           batch_size=32, X_V=X_V, Y_V=Y_V,p=0.5,mu=0.9)
 
 
     # Check accuracy and generate a plot with its history

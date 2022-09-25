@@ -24,7 +24,7 @@ class Layer:
         self.dZ: np.ndarray = None
 
     def __repr__(self) -> str:
-        return f"Layer({self.size}, {self.act_f}, {self.weight_dim})"
+        return f"Layer({self.size}, {self.act_f.__name__}, {self.weight_dim})"
 
     def set_input_size(self, input_size: int) -> None:
         self.weight_dim = (self.size, input_size)
@@ -77,6 +77,7 @@ class Network:
             layer.init_params()
 
     def disp_layers(self):
+        print("Input layer: ",self.input_size)
         for l in self.layers:
             print(l)
 
