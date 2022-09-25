@@ -1,1 +1,4 @@
 __pycache__/
+tkintermess/
+ActivationFunctions.py
+*.pkl

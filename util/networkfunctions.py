@@ -12,11 +12,11 @@ def ReLU(Z, derivative=False):
 
 def Sigmoid(Z, derivative=False):
     if not derivative:
-        return_val=np.zeros_like(Z)
+        A=np.zeros_like(Z)
         z_mask=(Z>0)
-        return_val[z_mask]=1. / (1. + np.exp(-Z[z_mask]))
-        return_val[~z_mask]=np.exp(Z[~z_mask]) / (np.exp(Z[~z_mask]) + np.exp(0))
-        return return_val
+        A[z_mask]=1. / (1. + np.exp(-Z[z_mask]))
+        A[~z_mask]=np.exp(Z[~z_mask]) / (np.exp(Z[~z_mask]) + np.exp(0))
+        return A
         # return 1/(1+np.exp(-Z))
     else:
         sz=Sigmoid(Z,derivative=False)

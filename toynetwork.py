@@ -188,7 +188,8 @@ class Network:
                     acc_v = self.get_accuracy(predictions_v, Y_V)
                 self.history.append((i, acc, acc_v))
                 print(
-                    f"Epoch: {i}\tAccuracy (T): {acc:.4f}\tAccuracy (V): {acc_v:.4f} , t: {t},a: {alpha/t**p:e}")
+                    f"Epoch: {i}\tAccuracy (T): {acc:.4f}\tAccuracy (V): {acc_v:.4f}")
+        return (acc,acc_v)
 
     @staticmethod
     def get_accuracy(predictions, Y):
