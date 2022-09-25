@@ -113,6 +113,7 @@ class Network:
             print("Loss:", self.loss_function.__name__, "Act:",)
             raise NotImplementedError(
                 "Can't handle other combinations of last layer activation function and loss than softmax, cross_entropy yet.")
+
         # TODO: revisar esto
         for i, layer in reversed(list(enumerate(self.layers[:-1]))):
             upper_layer = self.layers[i+1]
@@ -123,7 +124,8 @@ class Network:
             lower_A = X if i == 0 else self.layers[i-1].A
             layer.dW = (layer.dZ @ lower_A.T)/batch_size
 
-    def update_params(self, alpha, mu):
+    def update_params(self, alpha_0, p, mu, t):
+        alpha=alpha_0/t**p
         for layer in self.layers:
             layer.dW=-alpha*layer.dW + mu*layer.prev_dW
 
@@ -132,7 +134,7 @@ class Network:
 
             layer.prev_dW = layer.dW
 
-    def gradient_descent(self, X, Y, *, alpha, epochs, batch_size, X_V=None, Y_V=None, mu=0.9):
+    def gradient_descent(self, X, Y, *, alpha, epochs, batch_size, p=0, X_V=None, Y_V=None, mu=0.9):
         def batch_split(x, batch_size, axis):
             b = batch_size
             x = x.swapaxes(0, axis)
@@ -145,6 +147,7 @@ class Network:
         self.history = []
         N = Y.size
         Y_one_hot = self.one_hot(Y)
+        t=1
         for i in range(epochs):
             # Shuffle trainig data first
             perms = np.random.permutation(N)
@@ -155,7 +158,7 @@ class Network:
             for X_b, Y_b in zip(batch_split(X_perm, batch_size, axis=1), batch_split(Y_perm, batch_size, axis=1)):
                 self.forward_propagate(X_b)
                 self.backward_prop(X_b, Y_b)
-                self.update_params(alpha, mu)
+                self.update_params(alpha,p, mu, t)
 
                 # # Overkill epoch logging, just for fun
                 # predictions=self.get_predictions(X)
@@ -168,6 +171,7 @@ class Network:
                 # print(f"Epoch: {i+nb/N*batch_size:.2f}\tAccuracy (T): {acc:.4f}\tAccuracy (V): {acc_v:.4f}")
 
                 nb += 1
+                t+=1
             if i % 1 == 0:
                 acc = 0
                 predictions = self.get_predictions(X)
@@ -178,7 +182,7 @@ class Network:
                     acc_v = self.get_accuracy(predictions_v, Y_V)
                 self.history.append((i, acc, acc_v))
                 print(
-                    f"Epoch: {i}\tAccuracy (T): {acc:.4f}\tAccuracy (V): {acc_v:.4f}")
+                    f"Epoch: {i}\tAccuracy (T): {acc:.4f}\tAccuracy (V): {acc_v:.4f} , t: {t},a: {alpha/t**p:e}")
 
     @staticmethod
     def get_accuracy(predictions, Y):
