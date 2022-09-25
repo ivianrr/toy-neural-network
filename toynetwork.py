@@ -19,6 +19,7 @@ class Layer:
         self.Z: np.ndarray = None
         self.A: np.ndarray = None
         self.dW: np.ndarray = None
+        self.prev_dW: np.ndarray = None
         self.db: np.ndarray = None
         self.dZ: np.ndarray = None
 
@@ -31,6 +32,7 @@ class Layer:
     def init_params(self) -> None:
         assert self.weight_dim != None, "Number of inputs for layer not yet defined."
         self.weights = np.random.rand(*self.weight_dim)-0.5
+        self.prev_dW = np.zeros_like(self.weights)
         self.biases = np.random.rand(self.size, 1)-0.5
 
 
@@ -153,7 +155,7 @@ class Network:
             for X_b, Y_b in zip(batch_split(X_perm, batch_size, axis=1), batch_split(Y_perm, batch_size, axis=1)):
                 self.forward_propagate(X_b)
                 self.backward_prop(X_b, Y_b)
-                self.update_params(alpha)
+                self.update_params(alpha, mu)
 
                 # # Overkill epoch logging, just for fun
                 # predictions=self.get_predictions(X)
