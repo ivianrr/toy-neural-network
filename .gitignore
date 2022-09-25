@@ -1,4 +1,5 @@
 __pycache__/
-tkinter-tests/
+tkinter-tests/*
 ActivationFunctions.py
 samples/augmented/
+!/tkinter-tests/paint.py
