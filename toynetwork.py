@@ -8,9 +8,11 @@ from util import mnistdataset as mnist
 
 
 class Layer:
-    def __init__(self, size: int, activation_function: Callable) -> None:
+    def __init__(self, size: int, activation_function: Callable, lambda_L2: float=0.0005) -> None:
         self.act_f: np.ndarray = activation_function
         self.size: int = size
+        self.lambda_L2=lambda_L2
+
         self.weight_dim: tuple[int, int] = None
         self.weights: np.ndarray = None
         self.biases: np.ndarray = None
@@ -119,12 +121,16 @@ class Network:
             lower_A = X if i == 0 else self.layers[i-1].A
             layer.dW = (layer.dZ @ lower_A.T)/batch_size
 
-    def update_params(self, alpha):
+    def update_params(self, alpha, mu):
         for layer in self.layers:
-            layer.weights -= alpha*layer.dW
-            layer.biases -= alpha*layer.db
+            layer.dW=-alpha*layer.dW + mu*layer.prev_dW
 
-    def gradient_descent(self, X, Y, *, alpha, epochs, batch_size, X_V=None, Y_V=None):
+            layer.weights = (1-alpha*layer.lambda_L2)*layer.weights+layer.dW
+            layer.biases = (1-alpha*layer.lambda_L2)*layer.biases- alpha*layer.db
+
+            layer.prev_dW = layer.dW
+
+    def gradient_descent(self, X, Y, *, alpha, epochs, batch_size, X_V=None, Y_V=None, mu=0.9):
         def batch_split(x, batch_size, axis):
             b = batch_size
             x = x.swapaxes(0, axis)
