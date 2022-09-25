@@ -177,7 +177,7 @@ class Network:
                 # print(f"Epoch: {i+nb/N*batch_size:.2f}\tAccuracy (T): {acc:.4f}\tAccuracy (V): {acc_v:.4f}")
 
                 nb += 1
-                t+=1
+            t+=1
             if i % 1 == 0:
                 acc = 0
                 predictions = self.get_predictions(X)
