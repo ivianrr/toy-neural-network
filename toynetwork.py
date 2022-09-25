@@ -31,9 +31,15 @@ class Layer:
 
     def init_params(self) -> None:
         assert self.weight_dim != None, "Number of inputs for layer not yet defined."
-        self.weights = np.random.rand(*self.weight_dim)-0.5
+        if self.act_f.__name__=="Sigmoid":
+            A=2
+        else:
+            A=6
+        glorot_scale_factor=2*(A/np.sum(self.weight_dim))**0.5
+
+        self.weights = (np.random.rand(*self.weight_dim)-0.5)*glorot_scale_factor
         self.prev_dW = np.zeros_like(self.weights)
-        self.biases = np.random.rand(self.size, 1)-0.5
+        self.biases = (np.random.rand(self.size, 1)-0.5)*glorot_scale_factor
 
 
 class Network:
