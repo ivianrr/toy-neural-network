@@ -12,6 +12,7 @@ def ReLU(Z, derivative=False):
 
 def Sigmoid(Z, derivative=False):
     if not derivative:
+
         return 1/(1+np.exp(-Z))
     else:
         sz=Sigmoid(Z,derivative=False)
@@ -19,7 +20,9 @@ def Sigmoid(Z, derivative=False):
 
 
 def softmax(Z, derivative=False):
-    return np.exp(Z) / np.sum(np.exp(Z), axis=0)
+    # return np.exp(Z) / np.sum(np.exp(Z), axis=0)
+    e_Z = np.exp(Z - np.max(Z))
+    return e_Z / e_Z.sum(axis=0)
 
 
 def ELU(Z, derivative=False, a=1):
