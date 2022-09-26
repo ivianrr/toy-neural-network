@@ -15,12 +15,11 @@ if __name__ == "__main__":
 
     # Create and initialise network
     model = Network(input_size=nrows*ncols)
-    model.add_layer(Layer(100, Functions.ReLU,lambda_L2=0.005))
-    model.add_layer(Layer(30, Functions.ELU,lambda_L2=0.005))
-    for i in range(5):
-        model.add_layer(Layer(20, Functions.ELU,lambda_L2=0.001))
-    model.add_layer(Layer(30, Functions.Sigmoid))
-    model.add_layer(Layer(30, Functions.Sigmoid))
+    model.add_layer(Layer(100, Functions.ReLU,lambda_L2=0.005,keep_prob=1))
+    model.add_layer(Layer(30, Functions.ELU,lambda_L2=0.005,keep_prob=0.5))
+    # for i in range(5):
+    #     model.add_layer(Layer(20, Functions.ELU,lambda_L2=0.001,keep_prob=0.8))
+    model.add_layer(Layer(30, Functions.Sigmoid,keep_prob=0.5))
     model.add_layer(Layer(10, Functions.softmax))
     model.set_loss_function(Functions.cross_ent)
 
@@ -28,7 +27,7 @@ if __name__ == "__main__":
 
     # Train the network
     acc_T, acc_V = model.gradient_descent(X_T, Y_T, alpha=0.05, epochs=50,
-                           batch_size=32, X_V=X_V, Y_V=Y_V,p=0.5,mu=0.9)
+                           batch_size=32, X_V=X_V, Y_V=Y_V,p=0.5,mu=0.9,do_dropout=True)
 
 
     # Check accuracy and generate a plot with its history
@@ -40,7 +39,7 @@ if __name__ == "__main__":
     # acc_V = model.get_accuracy(predictions_V, Y_V)
     print("Final accuracy (Validation)", f"{acc_V:.3f}")
 
-    with open('model_deep.pkl', 'wb') as outp:
+    with open('model_dropout.pkl', 'wb') as outp:
         pickle.dump(model, outp, pickle.HIGHEST_PROTOCOL)
 
     model.plot_history()

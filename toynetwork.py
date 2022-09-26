@@ -8,10 +8,11 @@ from util import mnistdataset as mnist
 
 
 class Layer:
-    def __init__(self, size: int, activation_function: Callable, lambda_L2: float=0.0005) -> None:
+    def __init__(self, size: int, activation_function: Callable, lambda_L2: float=0.0005, keep_prob:float=1) -> None:
         self.act_f: np.ndarray = activation_function
         self.size: int = size
         self.lambda_L2=lambda_L2
+        self.keep_prob =keep_prob
 
         self.weight_dim: tuple[int, int] = None
         self.weights: np.ndarray = None
@@ -22,6 +23,7 @@ class Layer:
         self.prev_dW: np.ndarray = None
         self.db: np.ndarray = None
         self.dZ: np.ndarray = None
+        self.D: np.ndarray=None
 
     def __repr__(self) -> str:
         return f"Layer({self.size}, {self.act_f.__name__}, {self.weight_dim})"
@@ -81,7 +83,7 @@ class Network:
         for l in self.layers:
             print(l)
 
-    def forward_propagate(self, X: np.ndarray):
+    def forward_propagate(self, X: np.ndarray,do_dropout:bool=False ):
         for i, layer in enumerate(self.layers):
             if i == 0:
                 input_value = X
@@ -89,6 +91,10 @@ class Network:
                 input_value = self.layers[i-1].A
             layer.Z = layer.weights @ input_value + layer.biases
             layer.A = layer.act_f(layer.Z)
+            # dropout: https://www.kaggle.com/code/mtax687/dropout-regularization-of-neural-net-using-numpy/notebook
+            if do_dropout:
+                layer.D=layer.keep_prob>np.random.rand(*layer.A.shape) # with this shape the dropout will be different for each sample inside the minibatch
+                layer.A*=layer.D/layer.keep_prob
 
     @staticmethod
     def one_hot(labels: np.ndarray):
@@ -103,7 +109,7 @@ class Network:
         A = self.layers[-1].A
         return np.argmax(A, axis=0)
 
-    def backward_prop(self, X: np.ndarray, Y: np.ndarray):
+    def backward_prop(self, X: np.ndarray, Y: np.ndarray, do_dropout:bool=False):
         """
         Args:
         Y:one hot encoded
@@ -117,14 +123,20 @@ class Network:
             output_layer.dW = (
                 output_layer.dZ @ self.layers[-2].A.T)/batch_size
         else:
-            print("Loss:", self.loss_function.__name__, "Act:",)
+            print("Loss:", self.loss_function.__name__, "Act:",output_layer.act_f.__name__)
             raise NotImplementedError(
                 "Can't handle other combinations of last layer activation function and loss than softmax, cross_entropy yet.")
 
         # TODO: revisar esto
         for i, layer in reversed(list(enumerate(self.layers[:-1]))):
             upper_layer = self.layers[i+1]
-            layer.dZ = upper_layer.weights.T @ upper_layer.dZ * \
+            #   ESTO ES EQUIVALENTE:
+            #   dZ1 = (dA1) * g'(Z1)
+            #   dZ1 = (W2.T @ dZ2) * g'(Z1)
+            #   En el caso de que haya dropout, hay que multiplicar dA1 por D1 y normalizar con p_keep 
+            #   D1 * dA1 donde * es element-wise
+            dropout_factor= layer.D/layer.keep_prob if do_dropout else 1
+            layer.dZ = dropout_factor*(upper_layer.weights.T @ upper_layer.dZ) * \
                 layer.act_f(layer.Z, derivative=True)
             layer.db = np.sum(layer.dZ, axis=1, keepdims=True)/batch_size
 
@@ -141,7 +153,7 @@ class Network:
 
             layer.prev_dW = layer.dW
 
-    def gradient_descent(self, X, Y, *, alpha, epochs, batch_size, p=0, X_V=None, Y_V=None, mu=0.9):
+    def gradient_descent(self, X, Y, *, alpha, epochs, batch_size, p=0, X_V=None, Y_V=None, mu=0.9,do_dropout=False):
         def batch_split(x, batch_size, axis):
             b = batch_size
             x = x.swapaxes(0, axis)
@@ -163,8 +175,8 @@ class Network:
             # Split in batches and run every batch each epoch.
             nb = 0
             for X_b, Y_b in zip(batch_split(X_perm, batch_size, axis=1), batch_split(Y_perm, batch_size, axis=1)):
-                self.forward_propagate(X_b)
-                self.backward_prop(X_b, Y_b)
+                self.forward_propagate(X_b,do_dropout)
+                self.backward_prop(X_b, Y_b,do_dropout)
                 self.update_params(alpha,p, mu, t)
 
                 # # Overkill epoch logging, just for fun
