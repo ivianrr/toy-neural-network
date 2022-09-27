@@ -109,6 +109,14 @@ class Network:
         A = self.layers[-1].A
         return np.argmax(A, axis=0)
 
+    def get_prediction_prob(self, X=None,):
+        if X is not None:
+            self.forward_propagate(X)
+        A = self.layers[-1].A
+        plist=[(i,p[0]*100) for i,p in enumerate(A)]
+        plist.sort(key=lambda x:x[1],reverse=True)
+        return plist
+
     def backward_prop(self, X: np.ndarray, Y: np.ndarray, do_dropout:bool=False):
         """
         Args:
