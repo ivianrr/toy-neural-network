@@ -18,7 +18,7 @@ def load_data():
     return labels, data, nrows, ncols
 
 
-def load_validation_data():
+def load_test_data():
     with open('samples/t10k-images.idx3-ubyte', 'rb') as f:
         magic, size = struct.unpack(">II", f.read(8))
         nrows, ncols = struct.unpack(">II", f.read(8))

@@ -231,7 +231,7 @@ if __name__ == "__main__":
     # Load dataset
     Y_T, X_T, nrows, ncols = mnist.load_data()
     X_T = X_T.T
-    Y_V, X_V, _, _ = mnist.load_validation_data()
+    Y_V, X_V, _, _ = mnist.load_test_data()
     X_V = X_V.T
 
     # Create and initialise network
