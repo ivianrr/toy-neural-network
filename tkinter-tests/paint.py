@@ -6,7 +6,7 @@ from tkinter.colorchooser import askcolor
 
 class Paint(object):
 
-    DEFAULT_PEN_SIZE = 5.0
+    DEFAULT_PEN_SIZE = 5
     DEFAULT_COLOR = 'black'
 
     def __init__(self):
@@ -29,6 +29,7 @@ class Paint(object):
 
         self.choose_size_button = Scale(self.root, from_=1, to=10, orient=HORIZONTAL)
         self.choose_size_button.grid(row=0, column=5)
+        self.choose_size_button.set(Paint.DEFAULT_PEN_SIZE)
 
         self.c = Canvas(self.root, bg='white', width=600, height=600)
         self.c.grid(row=1, columnspan=6)
@@ -53,7 +54,7 @@ class Paint(object):
         self.activate_button(self.brush_button)
 
     def display(self):
-        print(self.c.focus(self.c.find_closest(1,1)))
+        self.c.delete("all")
 
     def choose_color(self):
         self.eraser_on = False
