@@ -134,7 +134,7 @@ class main:
 
 if __name__ == '__main__':
     root = Tk()
-    with open('model_deep.pkl', 'rb') as inp:
+    with open('model_augmented2.pkl', 'rb') as inp:
         model: Network = pickle.load(inp)
     main(root, model)
     root.title('DrawingApp')

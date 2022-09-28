@@ -1,7 +1,7 @@
 import pickle
 from toynetwork import Network, Layer,Functions
 
-with open('model_deep.pkl', 'rb') as inp:
+with open('model_augmented2.pkl', 'rb') as inp:
     model: Network = pickle.load(inp)
 
 model.disp_layers()
