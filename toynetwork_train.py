@@ -8,7 +8,7 @@ from util import mnistdataset as mnist
 
 if __name__ == "__main__":
     # Load dataset
-    Y_T, X_T, nrows, ncols = mnist.load_data()
+    Y_T, X_T, nrows, ncols = mnist.load_data_augmented()
     X_T = X_T.T
     Y_V, X_V, _, _ = mnist.load_test_data()
     X_V = X_V.T
@@ -16,10 +16,10 @@ if __name__ == "__main__":
     # Create and initialise network
     model = Network(input_size=nrows*ncols)
     model.add_layer(Layer(100, Functions.ReLU,lambda_L2=0.005,keep_prob=1))
-    model.add_layer(Layer(30, Functions.ELU,lambda_L2=0.005,keep_prob=0.5))
+    # model.add_layer(Layer(30, Functions.ELU,lambda_L2=0.005,keep_prob=0.5))
     # for i in range(5):
     #     model.add_layer(Layer(20, Functions.ELU,lambda_L2=0.001,keep_prob=0.8))
-    model.add_layer(Layer(30, Functions.Sigmoid,keep_prob=0.5))
+    model.add_layer(Layer(30, Functions.Sigmoid,keep_prob=1))
     model.add_layer(Layer(10, Functions.softmax))
     model.set_loss_function(Functions.cross_ent)
 
@@ -39,7 +39,7 @@ if __name__ == "__main__":
     # acc_V = model.get_accuracy(predictions_V, Y_V)
     print("Final accuracy (Validation)", f"{acc_V:.3f}")
 
-    with open('model_dropout.pkl', 'wb') as outp:
+    with open('model_test.pkl', 'wb') as outp:
         pickle.dump(model, outp, pickle.HIGHEST_PROTOCOL)
 
     model.plot_history()
