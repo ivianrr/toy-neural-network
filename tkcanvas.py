@@ -25,9 +25,7 @@ class main:
         self.clear()
         self.model=model
         self.preview_id=-1
-        plt.plot(0,0)
-        plt.show()
-        plt.close()
+
 
     def paint(self,e):
         if self.preview_id !=-1:
@@ -47,7 +45,7 @@ class main:
         
         self.updateimg()
 
-        self.tkimg=ImageTk.PhotoImage(image=Image.fromarray(self.img*255).resize((564,564),Image.BOX))
+        self.tkimg=ImageTk.PhotoImage(image=Image.fromarray(self.img*255).resize((564,564),Image.Resampling.BOX))
         self.preview_id=self.c.create_image(0, 0,anchor=NW,image=self.tkimg)
         # self.c.itemconfig(-1, image=self.tkimg)
         # plt.imshow(self.img.reshape(28,28), cmap='gray')
@@ -79,7 +77,7 @@ class main:
         y1 = y + self.c.winfo_height()
         # X=np.array(PIL.ImageGrab.grab(bbox=(x,y,x1,y1)).resize((28,28),resample=Image.BILINEAR)  ) [:,:,0]#
         # X=np.array(PIL.ImageGrab.grab().crop((x,y,x1,y1))  ) [:,:,0]#.resize((28,28),resample=Image.BILINEAR)
-        X=np.array(PIL.ImageGrab.grab(rect).resize((28,28),resample=Image.BILINEAR)) [:,:,0]#
+        X=np.array(PIL.ImageGrab.grab(rect).resize((28,28),resample=Image.Resampling.BILINEAR)) [:,:,0]#
         X=X/X.max()
         # print("___________")
         txt=""
@@ -137,6 +135,10 @@ if __name__ == '__main__':
     with open('model_augmented2.pkl', 'rb') as inp:
         model: Network = pickle.load(inp)
     main(root, model)
+
+    model.plot_history()
+    plt.close()
+
     root.title('DrawingApp')
     root.mainloop()
 
