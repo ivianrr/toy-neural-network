@@ -253,7 +253,7 @@ if __name__ == "__main__":
     acc_V = model.get_accuracy(predictions_V, Y_V)
     print("Final accuracy (Validation)", acc_V)
 
-    with open('model.pkl', 'wb') as outp:
+    with open('model_pc.pkl', 'wb') as outp:
         pickle.dump(model, outp, pickle.HIGHEST_PROTOCOL)
 
     model.plot_history()
